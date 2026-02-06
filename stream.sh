@@ -64,8 +64,8 @@ stream_to_youtube() {
             -c:v libx264 \
             -preset ultrafast \
             -tune zerolatency \
-            -crf 28 \
-            -maxrate 2000k \
+            -crf 35 \
+            -maxrate 1000k \
             -bufsize 4000k \
             -g 60 \
             -keyint_min 60 \
