@@ -1,16 +1,14 @@
-
-
 #!/bin/bash
 
 # Configuración de variables
-VIDEO_FILE="${VIDEO_FILE:-rickroll.mp4}"
 YOUTUBE_KEY="${YOUTUBE_KEY:-your-youtube-code}"
 SERVER_PORT="${PORT:-8080}"
+VIDEO_DIR="/app"
 
 # Instalar dependencias necesarias
 apt-get update && apt-get install -y ffmpeg nginx
 
-# Configurar nginx
+# Configurar nginx para servir archivos de video
 mkdir -p /var/www/html
 cat > /etc/nginx/sites-available/default << EOF
 server {
@@ -30,39 +28,62 @@ EOF
 # Iniciar nginx
 service nginx start
 
-# Loop con videos aleatorios
-while true; do
-    # Obtener lista de videos
-    VIDEOS=(/app/*.mp4)
+# Crear playlist con videos aleatorios
+create_playlist() {
+    # Limpiar directorio web
+    rm -f /var/www/html/*.mp4
+    
+    # Obtener lista de videos y mezclarlos aleatoriamente
+    VIDEOS=($(ls $VIDEO_DIR/*.mp4 2>/dev/null | shuf))
     
     if [ ${#VIDEOS[@]} -eq 0 ]; then
-        echo "Error: No hay videos en /app/"
+        echo "Error: No se encontraron videos en $VIDEO_DIR"
         exit 1
     fi
     
-    # Seleccionar video aleatorio
-    VIDEO=${VIDEOS[$RANDOM % ${#VIDEOS[@]}]}
-    echo "========================================="
-    echo "Videos totales: ${#VIDEOS[@]}"
-    echo "Reproduciendo: $(basename $VIDEO)"
-    echo "========================================="
+    echo "Videos encontrados: ${#VIDEOS[@]}"
     
-    # Copiar a nginx
-    cp "$VIDEO" /var/www/html/video.mp4
-    
-    # Transmitir (configuración simplificada y optimizada)
-    ffmpeg -stream_loop 5 \
-        -re -i "http://localhost:$SERVER_PORT/video.mp4" \
-        -c:v libx264 \
-        -preset superfast \
-        -maxrate 1500k \
-        -bufsize 3000k \
-        -g 50 \
-        -c:a aac \
-        -b:a 128k \
-        -ar 44100 \
-        -f flv "rtmp://a.rtmp.youtube.com/live2/$YOUTUBE_KEY"
-    
-    echo "Video terminado. Siguiente en 2 segundos..."
-    sleep 2
-done
+    # Crear archivo de lista para FFmpeg
+    rm -f /tmp/playlist.txt
+    for video in "${VIDEOS[@]}"; do
+        echo "file '$video'" >> /tmp/playlist.txt
+    done
+}
+
+# Función para transmitir a YouTube
+stream_to_youtube() {
+    while true; do
+        echo "Creando nueva playlist aleatoria..."
+        create_playlist
+        
+        echo "Iniciando transmisión a YouTube..."
+        
+        # Configuración OPTIMIZADA para bajo consumo de CPU
+        ffmpeg -f concat -safe 0 -stream_loop -1 \
+            -re -i /tmp/playlist.txt \
+            -c:v libx264 \
+            -preset ultrafast \
+            -tune zerolatency \
+            -crf 28 \
+            -maxrate 2000k \
+            -bufsize 4000k \
+            -g 60 \
+            -keyint_min 60 \
+            -sc_threshold 0 \
+            -profile:v baseline \
+            -level 3.0 \
+            -pix_fmt yuv420p \
+            -c:a aac \
+            -b:a 128k \
+            -ar 44100 \
+            -ac 2 \
+            -threads 2 \
+            -f flv "rtmp://a.rtmp.youtube.com/live2/$YOUTUBE_KEY"
+        
+        echo "Stream finalizado, reiniciando con nueva playlist..."
+        sleep 2
+    done
+}
+
+# Iniciar transmisión
+stream_to_youtube
