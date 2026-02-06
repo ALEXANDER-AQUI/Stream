@@ -58,26 +58,30 @@ stream_to_youtube() {
         
         echo "Iniciando transmisión a YouTube..."
         
-        # Configuración OPTIMIZADA para bajo consumo de CPU
+        # Configuración ULTRA OPTIMIZADA para CPU bajo (30-40%)
         ffmpeg -f concat -safe 0 -stream_loop -1 \
             -re -i /tmp/playlist.txt \
             -c:v libx264 \
             -preset ultrafast \
             -tune zerolatency \
-            -crf 28 \
-            -maxrate 2000k \
-            -bufsize 4000k \
-            -g 60 \
-            -keyint_min 60 \
+            -crf 32 \
+            -maxrate 1200k \
+            -bufsize 2400k \
+            -vf "scale=1280:720" \
+            -r 24 \
+            -g 120 \
+            -keyint_min 120 \
             -sc_threshold 0 \
             -profile:v baseline \
-            -level 3.0 \
+            -level 3.1 \
             -pix_fmt yuv420p \
+            -x264opts "nal-hrd=cbr:force-cfr=1" \
             -c:a aac \
-            -b:a 128k \
+            -b:a 96k \
             -ar 44100 \
             -ac 2 \
-            -threads 2 \
+            -threads 1 \
+            -thread_queue_size 512 \
             -f flv "rtmp://a.rtmp.youtube.com/live2/$YOUTUBE_KEY"
         
         echo "Stream finalizado, reiniciando con nueva playlist..."
@@ -87,3 +91,4 @@ stream_to_youtube() {
 
 # Iniciar transmisión
 stream_to_youtube
+
