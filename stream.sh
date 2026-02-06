@@ -65,7 +65,7 @@ stream_to_youtube() {
             -preset ultrafast \
             -tune zerolatency \
             -crf 28 \
-            -maxrate 1000k \
+            -maxrate 200k \
             -bufsize 4000k \
             -g 60 \
             -keyint_min 60 \
