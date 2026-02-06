@@ -1,38 +1,43 @@
 #!/bin/bash
 
-# Configuración de variables
-VIDEO_FILE="${VIDEO_FILE:-rickroll.mp4}"
-YOUTUBE_KEY="${YOUTUBE_KEY:-your-youtube-code}"
-SERVER_PORT="${PORT:-8080}"
+YOUTUBE_KEY="${YOUTUBE_KEY}"
 
-# Instalar dependencias necesarias
-apt-get update && apt-get install -y ffmpeg nginx
+cd /app
 
-# Configurar nginx para servir el archivo de video
-mkdir -p /var/www/html
-cp "$VIDEO_FILE" /var/www/html/video.mp4
+echo "Buscando videos..."
 
-cat > /etc/nginx/sites-available/default << EOF
-server {
-    listen $SERVER_PORT default_server;
-    listen [::]:$SERVER_PORT default_server;
-    
-    root /var/www/html;
-    
-    location / {
-        add_header 'Access-Control-Allow-Origin' '*';
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
-        try_files \$uri \$uri/ =404;
-    }
-}
-EOF
+find /app -type f -iname "*.mp4" > videos.txt
 
-# Iniciar nginx
-service nginx start
+TOTAL=$(wc -l < videos.txt)
 
-# Iniciar la transmisión a YouTube
-ffmpeg -stream_loop -1 \
-    -re -i "http://localhost:$SERVER_PORT/video.mp4" \
-    -c:v libx264 -preset veryfast -maxrate 3000k -bufsize 6000k -g 50 \
-    -c:a aac -b:a 160k -ar 44100 \
-    -f flv "rtmp://a.rtmp.youtube.com/live2/$YOUTUBE_KEY"
+if [ "$TOTAL" -eq 0 ]; then
+  echo "No hay videos"
+  exit 1
+fi
+
+echo "Videos encontrados: $TOTAL"
+
+while true
+do
+
+  shuf videos.txt > playlist.txt
+
+  echo "Transmitiendo con calidad optimizada..."
+
+  ffmpeg \
+  -re \
+  -f concat \
+  -safe 0 \
+  -i playlist.txt \
+  -c:v copy \
+  -c:a copy \
+  -f flv \
+  -flvflags no_duration_filesize \
+  -bufsize 6000k \
+  -rtmp_buffer 1000 \
+  "rtmp://a.rtmp.youtube.com/live2/$YOUTUBE_KEY"
+
+  sleep 2
+
+done
+
