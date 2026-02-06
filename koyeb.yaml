@@ -10,7 +10,8 @@ services:
     env:
       - key: YOUTUBE_KEY
         value: your-youtube-key
-      - key: VIDEO_FILE
-        value: rickroll.mp4
       - key: PORT
         value: 8080
+    # Limitar recursos para evitar consumo excesivo
+    instance:
+      type: nano  # Puedes ajustar según tus necesidades
