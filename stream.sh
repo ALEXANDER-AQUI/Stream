@@ -65,7 +65,7 @@ stream_to_youtube() {
             -preset ultrafast \
             -tune zerolatency \
             -crf 28 \
-            -maxrate 2000k \
+            -maxrate 1000k \
             -bufsize 4000k \
             -g 60 \
             -keyint_min 60 \
@@ -74,7 +74,7 @@ stream_to_youtube() {
             -level 3.0 \
             -pix_fmt yuv420p \
             -c:a aac \
-            -b:a 128k \
+            -b:a 64k \
             -ar 44100 \
             -ac 2 \
             -threads 2 \
