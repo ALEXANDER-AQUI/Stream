@@ -1,52 +1,75 @@
 #!/bin/bash
+# VERSIÓN CPU MUY BAJO (25-35%) - CON VIDEOS RANDOM
 
-YOUTUBE_KEY="${YOUTUBE_KEY}"
+YOUTUBE_KEY="${YOUTUBE_KEY:-your-youtube-code}"
+SERVER_PORT="${PORT:-8080}"
 VIDEO_DIR="/app"
 
-echo "Iniciando sistema de streaming..."
+apt-get update && apt-get install -y ffmpeg nginx
 
-# Verificar que exista la clave
-if [ -z "$YOUTUBE_KEY" ]; then
-  echo "ERROR: Falta YOUTUBE_KEY"
-  exit 1
-fi
+mkdir -p /var/www/html
+cat > /etc/nginx/sites-available/default << EOF
+server {
+    listen $SERVER_PORT default_server;
+    listen [::]:$SERVER_PORT default_server;
+    root /var/www/html;
+    location / {
+        add_header 'Access-Control-Allow-Origin' '*';
+        try_files \$uri \$uri/ =404;
+    }
+}
+EOF
 
-while true
-do
+service nginx start
 
-  echo "Buscando videos en $VIDEO_DIR..."
+create_playlist() {
+    # Videos mezclados aleatoriamente
+    VIDEOS=($(ls $VIDEO_DIR/*.mp4 2>/dev/null | shuf))
+    
+    if [ ${#VIDEOS[@]} -eq 0 ]; then
+        echo "Error: No se encontraron videos"
+        exit 1
+    fi
+    
+    echo "=========================================="
+    echo "Videos totales: ${#VIDEOS[@]}"
+    echo "Orden aleatorio:"
+    for video in "${VIDEOS[@]}"; do
+        echo "  → $(basename $video)"
+    done
+    echo "=========================================="
+    
+    rm -f /tmp/playlist.txt
+    for video in "${VIDEOS[@]}"; do
+        echo "file '$video'" >> /tmp/playlist.txt
+    done
+}
 
-  # crear playlist random correctamente
-  find "$VIDEO_DIR" -type f -iname "*.mp4" | shuf | sed "s/.*/file '&'/" > /tmp/playlist.txt
+stream_to_youtube() {
+    while true; do
+        create_playlist
+        
+        echo "Streaming en 720p @ 20fps (CPU bajo)..."
+        
+        # CONFIGURACIÓN ULTRA LIGERA PERO FUNCIONAL
+        ffmpeg -f concat -safe 0 -stream_loop -1 \
+            -re -i /tmp/playlist.txt \
+            -c:v libx264 \
+            -preset ultrafast \
+            -crf 30 \
+            -s 1280x720 \
+            -r 20 \
+            -maxrate 1000k \
+            -bufsize 2000k \
+            -g 60 \
+            -c:a aac \
+            -b:a 64k \
+            -ar 44100 \
+            -f flv "rtmp://a.rtmp.youtube.com/live2/$YOUTUBE_KEY"
+        
+        echo "Reiniciando en 5 segundos..."
+        sleep 5
+    done
+}
 
-  TOTAL=$(wc -l < /tmp/playlist.txt)
-
-  if [ "$TOTAL" -eq 0 ]; then
-    echo "No se encontraron videos"
-    sleep 5
-    continue
-  fi
-
-  echo "Videos encontrados: $TOTAL"
-  echo "Iniciando transmisión..."
-
-  # modo ultra bajo CPU (SIN recodificar)
-  ffmpeg \
-  -re \
-  -f concat \
-  -safe 0 \
-  -protocol_whitelist file,pipe \
-  -i /tmp/playlist.txt \
-  -c:v copy \
-  -c:a copy \
-  -f flv \
-  -flvflags no_duration_filesize \
-  -fflags +genpts \
-  -avoid_negative_ts make_zero \
-  "rtmp://a.rtmp.youtube.com/live2/$YOUTUBE_KEY"
-
-  echo "Reiniciando lista random..."
-
-  sleep 2
-
-done
+stream_to_youtube
