@@ -1,47 +1,68 @@
+
+
 #!/bin/bash
 
-YOUTUBE_KEY="${YOUTUBE_KEY}"
-VIDEO_DIR="/app"
+# Configuración de variables
+VIDEO_FILE="${VIDEO_FILE:-rickroll.mp4}"
+YOUTUBE_KEY="${YOUTUBE_KEY:-your-youtube-code}"
+SERVER_PORT="${PORT:-8080}"
 
-echo "Iniciando sistema optimizado..."
+# Instalar dependencias necesarias
+apt-get update && apt-get install -y ffmpeg nginx
 
-create_playlist() {
+# Configurar nginx
+mkdir -p /var/www/html
+cat > /etc/nginx/sites-available/default << EOF
+server {
+    listen $SERVER_PORT default_server;
+    listen [::]:$SERVER_PORT default_server;
+    
+    root /var/www/html;
+    
+    location / {
+        add_header 'Access-Control-Allow-Origin' '*';
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+        try_files \$uri \$uri/ =404;
+    }
+}
+EOF
 
-    ls $VIDEO_DIR/*.mp4 2>/dev/null | shuf | sed "s/.*/file '&'/" > /tmp/playlist.txt
+# Iniciar nginx
+service nginx start
 
-    TOTAL=$(wc -l < /tmp/playlist.txt)
-
-    if [ "$TOTAL" -eq 0 ]; then
-        echo "No hay videos"
+# Loop con videos aleatorios
+while true; do
+    # Obtener lista de videos
+    VIDEOS=(/app/*.mp4)
+    
+    if [ ${#VIDEOS[@]} -eq 0 ]; then
+        echo "Error: No hay videos en /app/"
         exit 1
     fi
-
-    echo "Videos encontrados: $TOTAL"
-}
-
-while true
-do
-
-    create_playlist
-
-    echo "Transmitiendo con CPU ultra bajo..."
-
-    ffmpeg \
-    -re \
-    -f concat \
-    -safe 0 \
-    -protocol_whitelist file,pipe \
-    -i /tmp/playlist.txt \
-    -c:v copy \
-    -c:a copy \
-    -f flv \
-    -flvflags no_duration_filesize \
-    -fflags +genpts \
-    -avoid_negative_ts make_zero \
-    "rtmp://a.rtmp.youtube.com/live2/$YOUTUBE_KEY"
-
+    
+    # Seleccionar video aleatorio
+    VIDEO=${VIDEOS[$RANDOM % ${#VIDEOS[@]}]}
+    echo "========================================="
+    echo "Videos totales: ${#VIDEOS[@]}"
+    echo "Reproduciendo: $(basename $VIDEO)"
+    echo "========================================="
+    
+    # Copiar a nginx
+    cp "$VIDEO" /var/www/html/video.mp4
+    
+    # Transmitir (configuración simplificada y optimizada)
+    ffmpeg -stream_loop 5 \
+        -re -i "http://localhost:$SERVER_PORT/video.mp4" \
+        -c:v libx264 \
+        -preset superfast \
+        -maxrate 1500k \
+        -bufsize 3000k \
+        -g 50 \
+        -c:a aac \
+        -b:a 128k \
+        -ar 44100 \
+        -f flv "rtmp://a.rtmp.youtube.com/live2/$YOUTUBE_KEY"
+    
+    echo "Video terminado. Siguiente en 2 segundos..."
     sleep 2
-
 done
-
-
