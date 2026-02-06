@@ -9,7 +9,8 @@ RUN apt-get update && apt-get install -y \
 # Copiar archivos
 WORKDIR /app
 COPY stream.sh /app/
-COPY rickroll.mp4 /app/
+# Copiar todos los videos del repositorio directamente
+COPY *.mp4 /app/
 
 # Dar permisos de ejecución al script
 RUN chmod +x /app/stream.sh
