@@ -20,9 +20,9 @@ echo "Videos encontrados: $TOTAL"
 while true
 do
 
-  shuf videos.txt > playlist.txt
+  shuf videos.txt | sed "s/^/file '/; s/$/'/" > playlist.txt
 
-  echo "Transmitiendo con calidad optimizada..."
+  echo "Transmitiendo videos random en bucle..."
 
   ffmpeg \
   -re \
@@ -33,8 +33,6 @@ do
   -c:a copy \
   -f flv \
   -flvflags no_duration_filesize \
-  -bufsize 6000k \
-  -rtmp_buffer 1000 \
   "rtmp://a.rtmp.youtube.com/live2/$YOUTUBE_KEY"
 
   sleep 2
