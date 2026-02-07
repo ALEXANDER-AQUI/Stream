@@ -52,7 +52,7 @@ stream_to_youtube() {
         echo "Streaming en 720p @ 20fps (CPU bajo)..."
         
         # CONFIGURACIÓN ULTRA LIGERA PERO FUNCIONAL
-        ffmpeg -f concat -safe 0 -stream_loop -1 \
+            ffmpeg -f concat -safe 0 \     
             -re -i /tmp/playlist.txt \
             -c:v libx264 \
             -preset ultrafast \
