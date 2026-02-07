@@ -1,6 +1,5 @@
 #!/bin/bash
-# VERSIÓN CPU MUY BAJO (25-35%) - CON VIDEOS RANDOM
-
+# VERSIÓN OPTIMIZADA PARA 100 GB/MES (34+ DÍAS 24/7)
 YOUTUBE_KEY="${YOUTUBE_KEY:-your-youtube-code}"
 SERVER_PORT="${PORT:-8080}"
 VIDEO_DIR="/app"
@@ -8,6 +7,7 @@ VIDEO_DIR="/app"
 apt-get update && apt-get install -y ffmpeg nginx
 
 mkdir -p /var/www/html
+
 cat > /etc/nginx/sites-available/default << EOF
 server {
     listen $SERVER_PORT default_server;
@@ -49,22 +49,27 @@ stream_to_youtube() {
     while true; do
         create_playlist
         
-        echo "Streaming en 720p @ 20fps (CPU bajo)..."
+        echo "Streaming en 480p @ 15fps (optimizado 100GB/mes)..."
         
-        # CONFIGURACIÓN ULTRA LIGERA PERO FUNCIONAL
+        # CONFIGURACIÓN OPTIMIZADA PARA 100 GB/MES
         ffmpeg -f concat -safe 0 -stream_loop -1 \
             -re -i /tmp/playlist.txt \
             -c:v libx264 \
-            -preset ultrafast \
-            -crf 30 \
-            -s 1280x720 \
-            -r 20 \
-            -maxrate 1000k \
-            -bufsize 2000k \
-            -g 60 \
+            -preset veryfast \
+            -tune zerolatency \
+            -crf 28 \
+            -s 854x480 \
+            -r 15 \
+            -threads 1 \
+            -maxrate 240k \
+            -bufsize 480k \
+            -g 45 \
+            -keyint_min 45 \
+            -pix_fmt yuv420p \
             -c:a aac \
-            -b:a 64k \
-            -ar 44100 \
+            -b:a 32k \
+            -ar 22050 \
+            -ac 1 \
             -f flv "rtmp://a.rtmp.youtube.com/live2/$YOUTUBE_KEY"
         
         echo "Reiniciando en 5 segundos..."
@@ -73,5 +78,4 @@ stream_to_youtube() {
 }
 
 stream_to_youtube
-
 
