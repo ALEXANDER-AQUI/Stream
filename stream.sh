@@ -2,7 +2,7 @@
 # VERSIÓN OPTIMIZADA PARA 100 GB/MES (34+ DÍAS 24/7)
 YOUTUBE_KEY="${YOUTUBE_KEY:-your-youtube-code}"
 SERVER_PORT="${PORT:-8080}"
-VIDEO_DIR="videos"
+VIDEO_DIR="/videos"
 
 apt-get update && apt-get install -y ffmpeg nginx
 
