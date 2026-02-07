@@ -2,7 +2,7 @@
 # VERSIÓN OPTIMIZADA PARA 100 GB/MES (34+ DÍAS 24/7)
 YOUTUBE_KEY="${YOUTUBE_KEY:-your-youtube-code}"
 SERVER_PORT="${PORT:-8080}"
-VIDEO_DIR="/videos"
+VIDEO_DIR="/app"
 
 apt-get update && apt-get install -y ffmpeg nginx
 
@@ -52,7 +52,7 @@ stream_to_youtube() {
         echo "Streaming en 480p @ 15fps (optimizado 100GB/mes)..."
         
         # CONFIGURACIÓN OPTIMIZADA PARA 100 GB/MES
-            ffmpeg -f concat -safe 0 -stream_loop -1 \
+        ffmpeg -f concat -safe 0 \
             -re -i /tmp/playlist.txt \
             -c:v libx264 \
             -preset veryfast \
